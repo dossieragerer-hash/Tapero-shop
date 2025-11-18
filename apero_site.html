@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>APÉRO — Boutique en ligne</title>
+  <meta name="description" content="APÉRO — Produits d'épicerie, salades maison, fromages, charcuterie et boissons. Paiement CB via Stripe (lien à remplacer)." />
+  <style>
+    :root{
+      --bg:#fff7f0;
+      --card:#ffffff;
+      --accent:#d97706;
+      --muted:#6b7280;
+      --shadow: 0 6px 18px rgba(15,23,42,0.08);
+      --radius:14px;
+      --maxw:1100px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:linear-gradient(180deg,var(--bg),#fff);
+      color:#0f172a;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding:24px;
+      display:flex;
+      justify-content:center;
+    }
+    .container{width:100%;max-width:var(--maxw)}
+    header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:20px;
+    }
+    .brand{
+      display:flex;align-items:center;gap:12px;
+    }
+    .logo{
+      width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,#fef3c7,#fb923c);
+      display:flex;align-items:center;justify-content:center;font-weight:700;color:#7c2d12;font-size:20px;box-shadow:var(--shadow);
+    }
+    h1{margin:0;font-size:20px}
+    p.lead{margin:4px 0 0;color:var(--muted)}
+    .controls{display:flex;gap:12px;align-items:center}
+    .cart-btn{
+      background:#111827;color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;border:none;box-shadow:var(--shadow)
+    }
+    main{display:grid;grid-template-columns:1fr 360px;gap:20px}
+    .hero{
+      background:var(--card);padding:18px;border-radius:var(--radius);box-shadow:var(--shadow);
+    }
+    .categories{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+    .cat{background:#fff;padding:8px 12px;border-radius:10px;box-shadow:0 4px 12px rgba(2,6,23,0.04);cursor:pointer}
+    .products{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+    .card{background:var(--card);padding:12px;border-radius:12px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px}
+    .card img{width:100%;height:140px;object-fit:cover;border-radius:8px}
+    .price{font-weight:700;color:var(--accent)}
+    .small{font-size:13px;color:var(--muted)}
+    button.add{background:var(--accent);border:none;padding:8px;border-radius:10px;color:white;cursor:pointer}
+    aside.sidebar{position:sticky;top:24px;padding:16px;background:var(--card);border-radius:12px;box-shadow:var(--shadow);height:fit-content}
+    .cart-list{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+    .cart-item{display:flex;gap:8px;align-items:center;justify-content:space-between}
+    .qty{display:flex;gap:6px;align-items:center}
+    .muted{color:var(--muted);font-size:13px}
+    footer{margin-top:20px;color:var(--muted);font-size:13px}
+    .notice{background:#fff8f1;padding:10px;border-radius:10px;border:1px solid #ffedd5;color:#92400e}
+    @media(max-width:920px){main{grid-template-columns:1fr}aside.sidebar{position:static}}
+    /* Age modal */
+    .modal-back{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:flex;align-items:center;justify-content:center;z-index:60}
+    .modal{background:white;padding:18px;border-radius:12px;max-width:420px;box-shadow:var(--shadow)}
+    .btn-ghost{background:transparent;border:1px solid #e5e7eb;padding:8px;border-radius:10px;cursor:pointer}
+    a.link{color:var(--accent);text-decoration:none;font-weight:600}
+    /* small helpers */
+    .flex{display:flex;gap:8px;align-items:center}
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <header>
+      <div class="brand">
+        <div class="logo">APÉRO</div>
+        <div>
+          <h1>APÉRO — Votre boutique en ligne pour l'apéritif</h1>
+          <p class="lead">Produits frais, salades maison, fromages, charcuterie et boissons. Paiement CB via Stripe.</p>
+        </div>
+      </div>
+      <div class="controls">
+        <div class="muted">Livraison locale • Retrait en magasin</div>
+        <button class="cart-btn" id="openCart">Panier (<span id="cartCount">0</span>)</button>
+      </div>
+    </header>
+
+    <main>
+      <section>
+        <div class="hero">
+          <h2>Nos catégories</h2>
+          <div class="categories" id="categories"></div>
+          <div class="products" id="products"></div>
+        </div>
+
+        <div style="margin-top:14px" class="notice">
+          <strong>Remarque importante :</strong> les boutons "Acheter" mènent à des **liens de paiement Stripe** par produit. Remplacez les valeurs `data-payment-link` dans le code HTML par vos liens Stripe Payment Links réels depuis votre compte Stripe.
+        </div>
+
+        <section style="margin-top:18px">
+          <h3>À propos</h3>
+          <p class="small">APÉRO sélectionne des produits de qualité pour vos apéritifs. N'oubliez pas d'indiquer les allergènes et dates sur vos emballages selon la réglementation.</p>
+        </section>
+      </section>
+
+      <aside class="sidebar">
+        <div>
+          <h3>Panier</h3>
+          <div id="cartEmpty" class="muted">Ton panier est vide.</div>
+          <div class="cart-list" id="cartList" style="display:none"></div>
+
+          <div style="margin-top:12px" id="cartSummary" style="display:none">
+            <div class="flex"><div class="muted">Total</div><div style="margin-left:auto;font-weight:800" id="cartTotal">0,00 €</div></div>
+            <div style="margin-top:10px;display:flex;gap:8px">
+              <button class="add" id="checkoutBtn">Procéder au paiement</button>
+              <button class="btn-ghost" id="clearCart">Vider</button>
+            </div>
+            <div style="margin-top:8px" class="small muted">Option rapide : utilisez les boutons "Acheter" sur chaque produit pour un paiement CB direct (par produit).</div>
+          </div>
+        </div>
+
+        <hr style="margin:12px 0;border:none;height:1px;background:#f3f4f6" />
+        <div>
+          <h4>Contact</h4>
+          <div class="small">Email : <a class="link" href="mailto:contact@apero.example">contact@apero.example</a></div>
+          <div class="small">Tél : 06 12 34 56 78</div>
+          <div style="margin-top:8px" class="small">Horaires : Lun-Sam 10h–20h • Dim 10h–14h</div>
+        </div>
+      </aside>
+    </main>
+
+    <footer>
+      <div>© APÉRO — Vente d'alcool réservée aux +18 ans. <a class="link" href="#mentions">Mentions légales</a></div>
+    </footer>
+  </div>
+
+  <!-- Age verification modal (appears only if user attempts to add alcool) -->
+  <div id="ageModal" style="display:none" class="modal-back" aria-hidden="true">
+    <div class="modal">
+      <h3>Vérification d'âge</h3>
+      <p class="small">Cette catégorie contient des boissons alcoolisées. Êtes-vous âgé(e) de 18 ans ou plus ?</p>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="add" id="ageYes">Oui, j'ai 18+</button>
+        <button class="btn-ghost" id="ageNo">Non</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /*************************************************************************
+     * APÉRO — Single-file demo shop
+     * - Replace PRODUCT.paymentLink values with your Stripe Payment Links.
+     * - For alcohol products (ageRestricted: true) the modal asks for age.
+     * - "Acheter" per product opens the payment link (CB via Stripe).
+     * - Cart checkout composes a prefilled email with order details (workaround).
+     *
+     * Notes for production:
+     * - For a true single-cart Stripe Checkout, implement a small server that
+     *   creates a Stripe Checkout Session using Stripe secret key and cart lines.
+     * - Or create a Stripe Payment Link that represents a bundle / cart.
+     *************************************************************************/
+
+    const PRODUCTS = [
+      // Épicerie
+      { id: 'chips_art', category:'Épicerie', title:'Chips artisanales', price:2.90, desc:'Chips fines au sel de Camargue.', img:'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK' },
+      { id: 'houmous', category:'Épicerie', title:'Houmous classique', price:3.50, desc:'Crème de pois chiches onctueuse.', img:'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK' },
+      { id: 'tapenade', category:'Épicerie', title:'Tapenade d\'olives noires', price:4.20, desc:'Spécialité méditerranéenne.', img:'https://images.unsplash.com/photo-1542452255191-c4e3a6f9f24b?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK' },
+
+      // Salades maison
+      { id: 'cesar', category:'Salades maison', title:'Salade César', price:8.90, desc:'Poulet rôti, parmesan, croûtons et sauce maison.', img:'https://images.unsplash.com/photo-1552332386-f8dd00dc6f5d?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK' },
+      { id: 'mediterranee', category:'Salades maison', title:'Salade Méditerranéenne', price:7.90, desc:'Feta, olives, tomates cerise, concombre.', img:'https://images.unsplash.com/photo-1528825871115-3581a5387919?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK' },
+      { id: 'pates_pesto', category:'Salades maison', title:'Salade de pâtes pesto', price:6.90, desc:'Pâtes fraîches, basilic, mozzarella.', img:'https://images.unsplash.com/photo-1562967914-6086e3f0c9d8?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK' },
+
+      // Produits congelés
+      { id: 'pizza_4f', category:'Produits congelés', title:'Pizza 4 fromages', price:5.90, desc:'Pizza artisanale prête en 10 minutes.', img:'https://images.unsplash.com/photo-1601924582970-3e56f1f3f7bc?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK' },
+      { id: 'frites', category:'Produits congelés', title:'Frites maison', price:3.90, desc:'Pommes de terre françaises surgelées.', img:'https://images.unsplash.com/photo-1551782450-a2132b4ba21d?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK' },
+      { id: 'samoussas', category:'Produits congelés', title:'Samoussas légumes', price:4.50, desc:'Barquette de 10 pièces.', img:'https://images.unsplash.com/photo-1523987355523-c7b5b8a1c3d9?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK' },
+
+      // Fromagerie
+      { id: 'brie', category:'Fromagerie', title:'Brie de Meaux (100g)', price:2.80, desc:'Fromage crémeux AOP.', img:'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK' },
+      { id: 'comte', category:'Fromagerie', title:'Comté affiné 18 mois (100g)', price:3.20, desc:'Saveur douce et fruitée.', img:'https://images.unsplash.com/photo-1585238342028-5a7bdb1b0b4b?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK' },
+      { id: 'chevre', category:'Fromagerie', title:'Chèvre frais', price:2.50, desc:'Idéal pour les apéritifs.', img:'https://images.unsplash.com/photo-1547483238-6f8b6c8d7b5b?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK' },
+
+      // Charcuterie
+      { id: 'jambon', category:'Charcuterie', title:'Jambon sec (100g)', price:3.50, desc:'Affiné 12 mois, tranché fin.', img:'https://images.unsplash.com/photo-1604908177522-4b8f93f44f9f?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK' },
+      { id: 'rosette', category:'Charcuterie', title:'Rosette (100g)', price:3.20, desc:'Classique et savoureuse.', img:'https://images.unsplash.com/photo-1600180758892-5d0d3d7c0f8b?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK' },
+      { id: 'chorizo', category:'Charcuterie', title:'Chorizo doux (100g)', price:2.90, desc:'Parfait pour les planches.', img:'https://images.unsplash.com/photo-1598511722212-3a90d4b8e9d2?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK' },
+
+      // Alcool (ageRestricted)
+      { id: 'rose', category:'Alcool', title:'Vin rosé Côte de Provence', price:9.90, desc:'Frais et fruité, parfait pour l’apéro. (75cl)', img:'https://images.unsplash.com/photo-1510626176961-4b57c12db6d7?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK', ageRestricted:true },
+      { id: 'bierre', category:'Alcool', title:'Bière artisanale blonde', price:3.50, desc:'Bière locale non filtrée (33cl).', img:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK', ageRestricted:true },
+      { id: 'vodka', category:'Alcool', title:'Vodka 70cl', price:16.90, desc:'Idéale pour cocktails.', img:'https://images.unsplash.com/photo-1589739908874-3b1fa5a3a5b8?auto=format&fit=crop&w=800&q=60', paymentLink:'REPLACE_WITH_STRIPE_LINK', ageRestricted:true },
+    ];
+
+    // --- Render categories & products ---
+    const categoriesEl = document.getElementById('categories');
+    const productsEl = document.getElementById('products');
+    const categories = [...new Set(PRODUCTS.map(p=>p.category))];
+    categories.forEach(cat=>{
+      const d = document.createElement('div');
+      d.className='cat';
+      d.textContent = cat;
+      d.onclick = ()=>filterCategory(cat);
+      categoriesEl.appendChild(d);
+    });
+
+    function filterCategory(category){
+      renderProducts(PRODUCTS.filter(p=>p.category===category));
+    }
+
+    function renderProducts(list){
+      productsEl.innerHTML='';
+      list.forEach(p=>{
+        const card = document.createElement('div'); card.className='card';
+        const img = document.createElement('img'); img.src = p.img;
+        const title = document.createElement('div'); title.innerHTML = '<strong>'+p.title+'</strong>';
+        const desc = document.createElement('div'); desc.className='small'; desc.textContent = p.desc;
+        const foot = document.createElement('div'); foot.style.display='flex'; foot.style.alignItems='center'; foot.style.justifyContent='space-between';
+        const price = document.createElement('div'); price.className='price'; price.textContent = p.price.toFixed(2)+' €';
+        const actions = document.createElement('div');
+        // Acheter direct (ouvre payment link)
+        const buy = document.createElement('button'); buy.className='add'; buy.textContent='Acheter';
+        buy.onclick = (e)=>{
+          if(p.ageRestricted) {
+            requestAge(()=>{ openPaymentLink(p.paymentLink); });
+          } else {
+            openPaymentLink(p.paymentLink);
+          }
+        };
+        // Ajouter au panier
+        const add = document.createElement('button'); add.className='btn-ghost'; add.textContent='Ajouter au panier';
+        add.onclick = ()=>{
+          if(p.ageRestricted){
+            requestAge(()=>{ addToCart(p.id) });
+          } else {
+            addToCart(p.id);
+          }
+        };
+        actions.appendChild(add); actions.appendChild(buy);
+        foot.appendChild(price); foot.appendChild(actions);
+
+        card.appendChild(img);
+        card.appendChild(title);
+        card.appendChild(desc);
+        card.appendChild(foot);
+        productsEl.appendChild(card);
+      });
+    }
+
+    // initial render: show all
+    renderProducts(PRODUCTS);
+
+    // --- Cart logic ---
+    let CART = JSON.parse(localStorage.getItem('apero_cart')||'{}');
+    const cartCountEl = document.getElementById('cartCount');
+    const cartListEl = document.getElementById('cartList');
+    const cartEmptyEl = document.getElementById('cartEmpty');
+    const cartSummaryEl = document.getElementById('cartSummary');
+    const cartTotalEl = document.getElementById('cartTotal');
+
+    function saveCart(){ localStorage.setItem('apero_cart', JSON.stringify(CART)); updateCartUI(); }
+    function addToCart(productId){
+      if(!CART[productId]) CART[productId]=0;
+      CART[productId]+=1;
+      saveCart();
+    }
+    function removeFromCart(productId){
+      delete CART[productId]; saveCart();
+    }
+    function changeQty(productId, delta){
+      if(!CART[productId]) return;
+      CART[productId]+=delta;
+      if(CART[productId]<=0) delete CART[productId];
+      saveCart();
+    }
+    function clearCart(){ CART={}; saveCart(); }
+
+    function updateCartUI(){
+      const keys = Object.keys(CART);
+      cartCountEl.textContent = keys.reduce((s,k)=>s+CART[k],0);
+      if(keys.length===0){
+        cartEmptyEl.style.display='block';
+        cartListEl.style.display='none';
+        cartSummaryEl.style.display='none';
+        cartListEl.innerHTML='';
+        return;
+      }
+      cartEmptyEl.style.display='none';
+      cartListEl.style.display='flex';
+      cartSummaryEl.style.display='block';
+      cartListEl.innerHTML='';
+      let total=0;
+      keys.forEach(id=>{
+        const qty = CART[id];
+        const product = PRODUCTS.find(p=>p.id===id);
+        if(!product) return;
+        const item = document.createElement('div'); item.className='cart-item';
+        item.innerHTML = '<div><strong>'+product.title+'</strong><div class="small muted">'+product.price.toFixed(2)+' €</div></div>';
+        const right = document.createElement('div'); right.style.display='flex'; right.style.alignItems='center'; right.style.gap='8px';
+        const qtyBox = document.createElement('div'); qtyBox.className='qty';
+        const minus = document.createElement('button'); minus.className='btn-ghost'; minus.textContent='−'; minus.onclick=()=>changeQty(id,-1);
+        const q = document.createElement('div'); q.textContent=qty;
+        const plus = document.createElement('button'); plus.className='btn-ghost'; plus.textContent='+'; plus.onclick=()=>changeQty(id,1);
+        qtyBox.appendChild(minus); qtyBox.appendChild(q); qtyBox.appendChild(plus);
+        const remove = document.createElement('button'); remove.className='btn-ghost'; remove.textContent='Suppr'; remove.onclick=()=>removeFromCart(id);
+        right.appendChild(qtyBox); right.appendChild(remove);
+        item.appendChild(right);
+        cartListEl.appendChild(item);
+        total += product.price * qty;
+      });
+      cartTotalEl.textContent = total.toFixed(2) + ' €';
+    }
+
+    // init UI
+    updateCartUI();
+
+    // buttons
+    document.getElementById('openCart').onclick = ()=>{ window.scrollTo({top:0,behavior:'smooth'}); const el=document.querySelector('aside.sidebar'); el.style.boxShadow='0 10px 30px rgba(2,6,23,0.12)'; setTimeout(()=>el.style.boxShadow='var(--shadow)',600) };
+
+    document.getElementById('clearCart').onclick = ()=>{ if(confirm('Vider le panier ?')) clearCart(); };
+    document.getElementById('checkoutBtn').onclick = ()=>{ checkout(); };
+
+    // --- Payment & helpers ---
+    function openPaymentLink(link){
+      if(!link || link.includes('REPLACE_WITH_STRIPE_LINK')){
+        alert('Remplacez le champ "paymentLink" du produit par votre Stripe Payment Link (depuis votre compte Stripe).');
+        return;
+      }
+      window.open(link,'_blank');
+    }
+
+    function checkout(){
+      const keys = Object.keys(CART);
+      if(keys.length===0){ alert('Ton panier est vide.'); return; }
+      // If any alcohol in cart, ask age
+      const hasAlcohol = keys.some(id=>{ const p = PRODUCTS.find(x=>x.id===id); return p && p.ageRestricted; });
+      const doCheckout = ()=>{
+        // For simplicity: compose an email to merchant with order details (workaround if no server)
+        const merchantEmail = 'contact@apero.example';
+        let body = 'Commande APÉRO%0A%0A';
+        let total=0;
+        keys.forEach(id=>{
+          const p = PRODUCTS.find(x=>x.id===id);
+          body += `${CART[id]} x ${encodeURIComponent(p.title)} - ${p.price.toFixed(2)} €%0A`;
+          total += p.price * CART[id];
+        });
+        body += `%0ATotal: ${total.toFixed(2)} €%0A%0AMerci de me répondre avec un lien de paiement CB ou instructions de retrait.%0A`;
+        const subject = encodeURIComponent('Nouvelle commande APÉRO');
+        const mailto = `mailto:${merchantEmail}?subject=${subject}&body=${body}`;
+        window.location.href = mailto;
+      };
+
+      if(hasAlcohol){
+        requestAge(()=>doCheckout());
+      } else {
+        doCheckout();
+      }
+    }
+
+    // --- Age verification modal logic ---
+    const ageModal = document.getElementById('ageModal');
+    const ageYes = document.getElementById('ageYes');
+    const ageNo = document.getElementById('ageNo');
+    let ageCallback = null;
+    function requestAge(cb){
+      ageCallback = cb;
+      ageModal.style.display='flex';
+      ageModal.setAttribute('aria-hidden','false');
+    }
+    ageYes.onclick = ()=>{ ageModal.style.display='none'; if(ageCallback) ageCallback(); ageCallback=null; };
+    ageNo.onclick = ()=>{ ageModal.style.display='none'; alert('Vous devez avoir 18 ans pour acheter des boissons alcoolisées.'); ageCallback=null; };
+
+    // --- Simple search by category at top when click category: show products; add "Tous" view by clicking logo ---
+    document.querySelector('.logo').onclick = ()=>{ renderProducts(PRODUCTS); };
+
+    // Accessibility: allow keyboard escape to close age modal
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ ageModal.style.display='none'; ageCallback=null; } });
+
+    // END
+  </script>
+</body>
+</html>
